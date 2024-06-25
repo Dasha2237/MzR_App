@@ -1,5 +1,5 @@
 import threading
-
+from moviepy.editor import VideoFileClip
 import pygame
 import sys
 import os
@@ -50,6 +50,17 @@ class Page:
         self.hovered = self.button_rect.collidepoint(mouse_pos)
         self.button_color = BUTTON_HOVER_COLOR if self.hovered else BUTTON_COLOR
 
+    def play_video(self, video_path):
+        clip = VideoFileClip(video_path)
+        screen_width, screen_height = self.screen.get_size()
+        # Konvertiere das Video in Pygame-Oberflächen
+        for frame in clip.iter_frames(fps=24, dtype='uint8'):
+            frame_surface = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
+            frame_surface = pygame.transform.scale(frame_surface, (clip.w // 3, clip.h // 3))  # Framegröße anpassen
+            self.screen.blit(frame_surface, ((screen_width - frame_surface.get_width()) // 2, (screen_height - frame_surface.get_height()) // 2))
+            pygame.display.update()
+            pygame.time.delay(int(1000 / 30)) 
+
     def render(self):
         screen_width, screen_height = self.screen.get_size()
         self.screen.fill(BACKGROUND_COLOR)
@@ -75,6 +86,8 @@ class Page:
         text_instruction_rect = text_instruction.get_rect(center=(screen_width // 2, screen_height // 10))
         self.screen.blit(text_instruction, text_instruction_rect)
 
+        #Videos abspielen
+        self.play_video("test2.mp4")
 
 class WelcomePage(Page):
     def __init__(self, name, screen, instruction):
@@ -105,6 +118,33 @@ class ThirdPage(Page):
                 self.next = 'fourth'
                 
 class FourthPage(Page):
+    def __init__(self, name, screen, instruction):
+        super().__init__(name, screen, instruction)
+
+    def handle_events(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.button_rect.collidepoint(event.pos):
+                self.next = 'fifth'
+
+class FifthPage(Page):
+    def __init__(self, name, screen, instruction):
+        super().__init__(name, screen, instruction)
+
+    def handle_events(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.button_rect.collidepoint(event.pos):
+                self.next = 'sixth'
+
+class SixthPage(Page):
+    def __init__(self, name, screen, instruction):
+        super().__init__(name, screen, instruction)
+
+    def handle_events(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.button_rect.collidepoint(event.pos):
+                self.next = 'seventh'
+
+class SeventhPage(Page):
     def __init__(self, name, screen, instruction):
         super().__init__(name, screen, instruction)
 
@@ -187,6 +227,9 @@ def main():
         'second': SecondPage("second", screen, "Lege die Tüte wie gezeigt in die Klammer"),
         'third': ThirdPage("third",screen,"Öffne die Tüte und lege sie in die andere Klammer"),
         'fourth': FourthPage("fourth",screen,"Drehe Mutter an die Schraube"),
+        'fifth': FifthPage("fifth", screen, "Lege Schraube eins in die Tüte"),
+        'sixth': SixthPage("sixth", screen, "Drehe Mutter an die Schraube"),
+        'seventh': SeventhPage("seventh", screen, "Lege Schraube zwei in die Tüte und schließe sie anschließend"),
         'animation': AnimationPage("animation", screen, animation_images, 'second'),
     }
     current_page = pages['welcome']
