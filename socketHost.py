@@ -29,7 +29,7 @@ class SimpleServerFactory(protocol.Factory):
 
 
 # Настройка и запуск сервера
-host = '0.0.0.0'
+host = '10.55.25.136'
 port = 8000
 def startServer(host, port):
     factory = SimpleServerFactory()

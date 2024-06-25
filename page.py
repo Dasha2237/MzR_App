@@ -65,7 +65,7 @@ class Page:
 
         # Draw rounded button
         pygame.draw.rect(self.screen, self.button_color, self.button_rect, border_radius=20)
-
+ 
         # Draw button text
         self.screen.blit(text, text_rect)
 
@@ -93,8 +93,25 @@ class SecondPage(Page):
     def handle_events(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.button_rect.collidepoint(event.pos):
-                self.next = 'welcome'
+                self.next = 'third'
 
+class ThirdPage(Page):
+    def __init__(self, name, screen, instruction):
+        super().__init__(name, screen, instruction)
+
+    def handle_events(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.button_rect.collidepoint(event.pos):
+                self.next = 'fourth'
+                
+class FourthPage(Page):
+    def __init__(self, name, screen, instruction):
+        super().__init__(name, screen, instruction)
+
+    def handle_events(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.button_rect.collidepoint(event.pos):
+                self.next = 'welcome'
 
 class AnimationPage(Page):
     def __init__(self, name, screen, image_sequence, next_page):
@@ -166,8 +183,10 @@ def main():
             raise FileNotFoundError(f"Image {img} not found. Ensure images are placed correctly.")
 
     pages = {
-        'welcome': WelcomePage("welcome", screen, "Hello Markus bla bla bla"),
-        'second': SecondPage("second", screen, "etwas"),
+        'welcome': WelcomePage("welcome", screen, "Hallo Markus! Willkommen am Arbeitsplatz"),
+        'second': SecondPage("second", screen, "Lege die Tüte wie gezeigt in die Klammer"),
+        'third': ThirdPage("third",screen,"Öffne die Tüte und lege sie in die andere Klammer"),
+        'fourth': FourthPage("fourth",screen,"Drehe Mutter an die Schraube"),
         'animation': AnimationPage("animation", screen, animation_images, 'second'),
     }
     current_page = pages['welcome']
