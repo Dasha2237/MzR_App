@@ -16,6 +16,7 @@ info = pygame.display.Info()
 SCREEN_WIDTH = info.current_w
 SCREEN_HEIGHT = info.current_h
 FPS = 30
+SCALE_FACTOR = 2.5
 
 # Colors
 BACKGROUND_COLOR = (230, 255, 230)  # Light green
@@ -59,7 +60,7 @@ class Page:
             except StopIteration:
                 self.video_frame_gen = None  # Video ist zu Ende
 
-    def play_video(self, scale_factor=3):
+    def play_video(self):
         if self.videopath:
             self.video_clip = VideoFileClip(self.videopath)
             screen_width, screen_height = self.screen.get_size()
@@ -68,8 +69,8 @@ class Page:
             video_aspect_ratio = self.video_clip.w / self.video_clip.h
 
             # Berechne die neuen Dimensionen basierend auf einem Drittel der Bildschirmgröße
-            target_width = screen_width // scale_factor
-            target_height = screen_height // scale_factor
+            target_width = screen_width // SCALE_FACTOR
+            target_height = screen_height // SCALE_FACTOR
 
             if video_aspect_ratio > 1:
                 # Wenn das Video breiter ist im Verhältnis zum Bildschirm
@@ -82,6 +83,11 @@ class Page:
 
             # Initialisiere den Frame-Generator
             self.video_frame_gen = self.video_clip.iter_frames(fps=24, dtype='uint8')
+
+            # Skaliere das Video auf die berechnete Größe
+            frame = next(self.video_frame_gen)
+            self.video_surface = pygame.surfarray.make_surface(frame.swapaxes(0, 1))
+            self.video_surface = pygame.transform.scale(self.video_surface, (self.video_width, self.video_height))
 
     def render(self):
         screen_width, screen_height = self.screen.get_size()
@@ -264,7 +270,7 @@ def main():
         'animation': AnimationPage("animation", screen, animation_images, 'second'),
     }
     current_page = pages['welcome']
-    current_page.play_video(scale_factor=3)  # Starte das Video für die Seiten außer der Willkommensseite
+    current_page.play_video()  # Starte das Video für die Seiten außer der Willkommensseite
     running = True
 
     while running:
@@ -273,9 +279,11 @@ def main():
                 running = False
             if event.type == pygame.VIDEORESIZE:
                 screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
+                current_page.play_video()  # Resize video when the window is resized
             if event.type == socketClient.ROBOT_DONE:
                 print("Robot")
                 factory.client.sendMessage("message")
+
             current_page.handle_events(event)
 
         if current_page.next:
@@ -283,12 +291,17 @@ def main():
             next_page = pages[current_page.next]
             current_page.next = None
             current_page = next_page
-            if isinstance(current_page, AnimationPage):
+
+            # Start animation page
+            if type(current_page) == AnimationPage:
                 print("animation")
                 current_page.start_time = pygame.time.get_ticks()
+
             fade_in(screen, BACKGROUND_COLOR, speed=10)
+
+            # Start video for new pages
             if current_page.name != "welcome":
-                current_page.play_video(scale_factor=3)  # Starte das Video erneut für die neuen Seiten
+                current_page.play_video()
 
         current_page.update()
         current_page.render()
@@ -299,5 +312,5 @@ def main():
     pygame.quit()
     sys.exit()
 
-
+# Call the main function
 main()
