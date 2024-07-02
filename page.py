@@ -95,8 +95,8 @@ class Page:
 
         # Render video if not on welcome page
         if self.videopath and self.video_surface:
-            video_x = (screen_width - self.video_width) // 2
-            video_y = (screen_height - self.video_height) // 2
+            video_x = (screen_width - self.video_width) // 2 
+            video_y = (screen_height - self.video_height) // 2 - screen_height//10
             self.screen.blit(self.video_surface, (video_x, video_y))
 
         # Update button position and size
