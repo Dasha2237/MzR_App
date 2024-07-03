@@ -13,6 +13,8 @@ pygame.mixer.init()
 factory = socketClient.PygameClientFactory()
 server_thread = threading.Thread(target=socketClient.twisted_thread, args=(factory,), daemon=True)
 server_thread.start()
+#Initialize
+lastrandom= ""
 
 # Constants
 info = pygame.display.Info()
@@ -47,7 +49,7 @@ class Page:
         self.videopath = videopath
         self.next_page = None
         self.isGifPage = True
-
+        
     def handle_events(self, event):
         pass
 
@@ -278,12 +280,19 @@ def fade_in(screen, color, speed):
         alpha -= speed
         pygame.time.delay(10)
 
+def random_Gif(gif_list):
+    global lastrandom
+    randomize = random.choice(gif_list)
+    if randomize == lastrandom:
+        return random_Gif(gif_list)
+    lastrandom = randomize
+    return randomize
 
 def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100), pygame.RESIZABLE)
     clock = pygame.time.Clock()
     pygame.display.set_caption("App with Animations")
-
+    
     gif_list = ["thumbs-up-nice.gif", "yay.gif", "well-done-3182_256.gif","cool-fun.gif"]  # List of gifs
 
     pages = {
@@ -294,7 +303,7 @@ def main():
         'fifth': FifthPage("fifth", screen, "Lege Schraube eins in die Tüte", "test2.mp4"),
         'sixth': SixthPage("sixth", screen, "Drehe Mutter an die Schraube", "test2.mp4"),
         'seventh': SeventhPage("seventh", screen, "Lege Schraube zwei in die Tüte und schließe sie anschließend", "test2.mp4"),
-        'animation': AnimationPage("animation", screen, random.choice(gif_list)),
+        'animation': AnimationPage("animation", screen, random_Gif(gif_list)),
     }
 
     # Set the next page for each page
@@ -328,7 +337,7 @@ def main():
             if current_page.isGifPage == True:
                 # Transition to animation page first
                 animation_page = pages['animation']
-                animation_page.gif_path = random.choice(gif_list)
+                animation_page.gif_path = random_Gif(gif_list)
                 animation_page.load_gif_frames()
                 animation_page.reset()  # Reset the animation page attributes
                 animation_page.next_page = current_page.next_page
