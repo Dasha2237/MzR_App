@@ -8,6 +8,7 @@ import socketClient
 from PIL import Image
 
 pygame.init()
+pygame.mixer.init()
 
 factory = socketClient.PygameClientFactory()
 server_thread = threading.Thread(target=socketClient.twisted_thread, args=(factory,), daemon=True)
@@ -45,6 +46,7 @@ class Page:
         self.video_frame_gen = None
         self.videopath = videopath
         self.next_page = None
+        self.isGifPage = True
 
     def handle_events(self, event):
         pass
@@ -127,6 +129,7 @@ class Page:
 class WelcomePage(Page):
     def __init__(self, name, screen, instruction):
         super().__init__(name, screen, instruction)
+        self.isGifPage = False
 
     def handle_events(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
@@ -193,7 +196,6 @@ class SeventhPage(Page):
             if self.button_rect.collidepoint(event.pos):
                 self.next = 'welcome'
 
-
 class AnimationPage(Page):
     def __init__(self, name, screen, gif_path):
         super().__init__(name, screen, "", None)
@@ -202,8 +204,9 @@ class AnimationPage(Page):
         self.current_frame = 0
         self.frame_count = 0
         self.start_time = None
-        self.load_gif_frames()
         self.next_page = None
+        self.isGifPage = False
+        self.sound_effect = pygame.mixer.Sound("Applaus.wav")
 
     def load_gif_frames(self):
         gif = Image.open(self.gif_path)
@@ -231,7 +234,10 @@ class AnimationPage(Page):
         self.current_frame = int(elapsed_time * FPS) % self.frame_count
 
         if elapsed_time > ANIMATION_DURATION:
+            self.sound_effect.stop()
             self.next = self.next_page
+        else:
+                self.sound_effect.play()
 
     def render(self):
         self.screen.fill(BACKGROUND_COLOR)
@@ -245,6 +251,7 @@ class AnimationPage(Page):
     def reset(self):
         self.start_time = None
         self.current_frame = 0
+
 
 def fade_out(screen, color, speed):
     fade_surface = pygame.Surface(screen.get_size())
@@ -318,7 +325,7 @@ def main():
 
         if current_page.next:
             fade_out(screen, BACKGROUND_COLOR, speed=10)
-            if current_page.name != 'animation':
+            if current_page.isGifPage == True:
                 # Transition to animation page first
                 animation_page = pages['animation']
                 animation_page.gif_path = random.choice(gif_list)
