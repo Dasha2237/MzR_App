@@ -1,9 +1,11 @@
+import random
 import threading
 from moviepy.editor import VideoFileClip
 import pygame
 import sys
 import os
 import socketClient
+from PIL import Image
 
 pygame.init()
 
@@ -42,6 +44,7 @@ class Page:
         self.video_surface = None
         self.video_frame_gen = None
         self.videopath = videopath
+        self.next_page = None
 
     def handle_events(self, event):
         pass
@@ -138,7 +141,7 @@ class SecondPage(Page):
     def handle_events(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.button_rect.collidepoint(event.pos):
-                self.next = 'third'
+                self.next = 'animation'
 
 
 class ThirdPage(Page):
@@ -192,13 +195,30 @@ class SeventhPage(Page):
 
 
 class AnimationPage(Page):
-    def __init__(self, name, screen, image_sequence, next_page):
+    def __init__(self, name, screen, gif_path):
         super().__init__(name, screen, "", None)
-        self.images = [pygame.image.load(img).convert_alpha() for img in image_sequence]
+        self.gif_path = gif_path
+        self.frames = []
         self.current_frame = 0
-        self.frame_count = len(self.images)
-        self.next_page = next_page
+        self.frame_count = 0
         self.start_time = None
+        self.load_gif_frames()
+        self.next_page = None
+
+    def load_gif_frames(self):
+        gif = Image.open(self.gif_path)
+        self.frames = []
+        try:
+            while True:
+                frame = gif.copy()
+                frame = frame.convert('RGBA')
+                pygame_image = pygame.image.fromstring(frame.tobytes(), frame.size, frame.mode)
+                self.frames.append(pygame_image)
+                gif.seek(len(self.frames))
+        except EOFError:
+            pass
+        self.frame_count = len(self.frames)
+        print(f"Loaded {self.frame_count} frames from {self.gif_path}")
 
     def handle_events(self, event):
         pass
@@ -217,31 +237,38 @@ class AnimationPage(Page):
         self.screen.fill(BACKGROUND_COLOR)
         screen_width, screen_height = self.screen.get_size()
 
-        if self.images:
-            image = self.images[self.current_frame]
+        if self.frames:
+            image = self.frames[self.current_frame]
             image_rect = image.get_rect(center=(screen_width // 2, screen_height // 2))
             self.screen.blit(image, image_rect)
 
+    def reset(self):
+        self.start_time = None
+        self.current_frame = 0
 
-def fade_out(screen, color, speed=5):
-    """Fade out the screen."""
+def fade_out(screen, color, speed):
     fade_surface = pygame.Surface(screen.get_size())
-    fade_surface.fill(color)
-    for alpha in range(0, 256, speed):
+    fade_surface = fade_surface.convert()
+    alpha = 0
+    while alpha < 255:
+        fade_surface.fill(color)
         fade_surface.set_alpha(alpha)
         screen.blit(fade_surface, (0, 0))
-        pygame.display.update()
+        pygame.display.flip()
+        alpha += speed
         pygame.time.delay(10)
 
 
-def fade_in(screen, color, speed=5):
-    """Fade in the screen."""
+def fade_in(screen, color, speed):
     fade_surface = pygame.Surface(screen.get_size())
-    fade_surface.fill(color)
-    for alpha in range(255, -1, -speed):
+    fade_surface = fade_surface.convert()
+    alpha = 255
+    while alpha > 0:
+        fade_surface.fill(color)
         fade_surface.set_alpha(alpha)
         screen.blit(fade_surface, (0, 0))
-        pygame.display.update()
+        pygame.display.flip()
+        alpha -= speed
         pygame.time.delay(10)
 
 
@@ -250,14 +277,7 @@ def main():
     clock = pygame.time.Clock()
     pygame.display.set_caption("App with Animations")
 
-    # Image sequences for animations
-    # animation_images = [f"frame_{i}.png" for i in range(1, 6)]  # Replace with actual paths to your image frames
-    animation_images = ["healthy.png"]
-
-    # Ensure image files exist
-    for img in animation_images:
-        if not os.path.exists(img):
-            raise FileNotFoundError(f"Image {img} not found. Ensure images are placed correctly.")
+    gif_list = ["thumbs-up-nice.gif", "yay.gif", "well-done-3182_256.gif","cool-fun.gif"]  # List of gifs
 
     pages = {
         'welcome': WelcomePage("welcome", screen, "Hallo Markus! Willkommen am Arbeitsplatz"),
@@ -267,10 +287,20 @@ def main():
         'fifth': FifthPage("fifth", screen, "Lege Schraube eins in die Tüte", "test2.mp4"),
         'sixth': SixthPage("sixth", screen, "Drehe Mutter an die Schraube", "test2.mp4"),
         'seventh': SeventhPage("seventh", screen, "Lege Schraube zwei in die Tüte und schließe sie anschließend", "test2.mp4"),
-        'animation': AnimationPage("animation", screen, animation_images, 'second'),
+        'animation': AnimationPage("animation", screen, random.choice(gif_list)),
     }
+
+    # Set the next page for each page
+    pages['welcome'].next_page = 'second'
+    pages['second'].next_page = 'third'
+    pages['third'].next_page = 'fourth'
+    pages['fourth'].next_page = 'fifth'
+    pages['fifth'].next_page = 'sixth'
+    pages['sixth'].next_page = 'seventh'
+    pages['seventh'].next_page = 'welcome'
+
     current_page = pages['welcome']
-    current_page.play_video()  # Starte das Video für die Seiten außer der Willkommensseite
+    current_page.play_video()  # Start the video for pages other than the welcome page
     running = True
 
     while running:
@@ -288,15 +318,19 @@ def main():
 
         if current_page.next:
             fade_out(screen, BACKGROUND_COLOR, speed=10)
-            next_page = pages[current_page.next]
+            if current_page.name != 'animation':
+                # Transition to animation page first
+                animation_page = pages['animation']
+                animation_page.gif_path = random.choice(gif_list)
+                animation_page.load_gif_frames()
+                animation_page.reset()  # Reset the animation page attributes
+                animation_page.next_page = current_page.next_page
+                current_page = animation_page
+            else:
+                # Transition to the actual next page after the animation
+                current_page = pages[current_page.next_page]
+
             current_page.next = None
-            current_page = next_page
-
-            # Start animation page
-            if type(current_page) == AnimationPage:
-                print("animation")
-                current_page.start_time = pygame.time.get_ticks()
-
             fade_in(screen, BACKGROUND_COLOR, speed=10)
 
             # Start video for new pages
