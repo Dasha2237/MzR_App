@@ -40,9 +40,12 @@ class Page:
         self.next = None
         self.instruction = instruction
         self.font = pygame.font.Font(None, 36)
-        self.button_rect = pygame.Rect(0, 0, 0, 0)
-        self.button_color = BUTTON_COLOR
-        self.hovered = False
+        self.button_rect1 = pygame.Rect(0, 0, 0, 0)  # Erster Button
+        self.button_rect2 = pygame.Rect(0, 0, 0, 0)  # Zweiter Button
+        self.button_color1 = BUTTON_COLOR
+        self.button_color2 = BUTTON_COLOR
+        self.hovered1 = False  # Für den ersten Button
+        self.hovered2 = False  # Für den zweiten Button
         self.video_clip = None
         self.video_surface = None
         self.video_frame_gen = None
@@ -55,8 +58,10 @@ class Page:
 
     def update(self):
         mouse_pos = pygame.mouse.get_pos()
-        self.hovered = self.button_rect.collidepoint(mouse_pos)
-        self.button_color = BUTTON_HOVER_COLOR if self.hovered else BUTTON_COLOR
+        self.hovered1 = self.button_rect1.collidepoint(mouse_pos)
+        self.hovered2 = self.button_rect2.collidepoint(mouse_pos)
+        self.button_color1 = BUTTON_HOVER_COLOR if self.hovered1 else BUTTON_COLOR
+        self.button_color2 = BUTTON_HOVER_COLOR if self.hovered2 else BUTTON_COLOR
 
         # Aktualisiere das Video
         if self.video_frame_gen:
@@ -116,7 +121,7 @@ class Page:
         text_rect = text.get_rect(center=self.button_rect.center)
 
         # Draw rounded button
-        pygame.draw.rect(self.screen, self.button_color, self.button_rect, border_radius=20)
+        pygame.draw.rect(self.screen, self.button_color1, self.button_rect, border_radius=20)
 
         # Draw button text
         self.screen.blit(text, text_rect)
@@ -196,8 +201,50 @@ class SeventhPage(Page):
     def handle_events(self, event):
         if event.type == pygame.MOUSEBUTTONDOWN:
             if self.button_rect.collidepoint(event.pos):
-                self.next = 'welcome'
+                self.next = 'last'
 
+class LastPage(Page):
+    def __init__(self, name, screen, instruction, videopath=None):
+        super().__init__(name, screen, instruction, videopath)
+        self.isGifPage=False
+
+    def handle_events(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.button_rect1.collidepoint(event.pos):
+                self.next = 'second'
+            
+            if self.button_rect2.collidepoint(event.pos):
+                self.next = 'third'
+        
+
+
+    def render(self):
+        screen_width, screen_height = self.screen.get_size()
+        self.screen.fill(BACKGROUND_COLOR)
+
+        # Update and render position and size of the first button
+        self.button_rect1 = pygame.Rect(0.2 * screen_width, 0.7 * screen_height, 0.6 * screen_width, 0.2 * screen_height)
+        button_font_size = int(0.65 * min(self.button_rect1.width, self.button_rect1.height))
+        self.font = pygame.font.Font(None, button_font_size)
+        text1 = self.font.render('Fertig', True, TEXT_COLOR)
+        text_rect1 = text1.get_rect(center=self.button_rect1.center)
+        pygame.draw.rect(self.screen, self.button_color1, self.button_rect1, border_radius=20)
+        self.screen.blit(text1, text_rect1)
+
+        # Update and render position and size of the second button
+        self.button_rect2 = pygame.Rect(0.2 * screen_width, 0.4 * screen_height, 0.6 * screen_width, 0.2 * screen_height)
+        text2 = self.font.render('Zweiter Button', True, TEXT_COLOR)  # Text für den zweiten Button
+        text_rect2 = text2.get_rect(center=self.button_rect2.center)
+        pygame.draw.rect(self.screen, self.button_color2, self.button_rect2, border_radius=20)
+        self.screen.blit(text2, text_rect2)
+
+        # Render instruction text
+        font_instruction = pygame.font.Font(None, int(0.08 * screen_height))
+        text_instruction = font_instruction.render(self.instruction, True, INSTRUCTION_COLOR)
+        text_instruction_rect = text_instruction.get_rect(center=(screen_width // 2, screen_height // 10))
+        self.screen.blit(text_instruction, text_instruction_rect)
+
+        
 class AnimationPage(Page):
     def __init__(self, name, screen, gif_path):
         super().__init__(name, screen, "", None)
@@ -237,7 +284,7 @@ class AnimationPage(Page):
 
         if elapsed_time > ANIMATION_DURATION:
             self.sound_effect.stop()
-            self.next = self.next_page
+            self.next = self.next
         else:
                 self.sound_effect.play()
 
@@ -304,16 +351,18 @@ def main():
         'sixth': SixthPage("sixth", screen, "Drehe Mutter an die Schraube", "test2.mp4"),
         'seventh': SeventhPage("seventh", screen, "Lege Schraube zwei in die Tüte und schließe sie anschließend", "test2.mp4"),
         'animation': AnimationPage("animation", screen, random_Gif(gif_list)),
+        'last': LastPage("last",screen, "Sehr gut du hast einen Durchlauf geschafft!")
     }
 
     # Set the next page for each page
-    pages['welcome'].next_page = 'second'
+    pages['welcome'].next_page = 'last'
     pages['second'].next_page = 'third'
     pages['third'].next_page = 'fourth'
     pages['fourth'].next_page = 'fifth'
     pages['fifth'].next_page = 'sixth'
     pages['sixth'].next_page = 'seventh'
-    pages['seventh'].next_page = 'welcome'
+    pages['seventh'].next_page = 'last'
+    pages['last'].next_page = 'second'
 
     current_page = pages['welcome']
     current_page.play_video()  # Start the video for pages other than the welcome page
@@ -340,11 +389,11 @@ def main():
                 animation_page.gif_path = random_Gif(gif_list)
                 animation_page.load_gif_frames()
                 animation_page.reset()  # Reset the animation page attributes
-                animation_page.next_page = current_page.next_page
+                animation_page.next = current_page.next
                 current_page = animation_page
             else:
                 # Transition to the actual next page after the animation
-                current_page = pages[current_page.next_page]
+                current_page = pages[current_page.next]
 
             current_page.next = None
             fade_in(screen, BACKGROUND_COLOR, speed=10)
