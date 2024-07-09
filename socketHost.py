@@ -2,21 +2,24 @@ from twisted.internet import protocol, reactor
 
 class SimpleServerProtocol(protocol.Protocol):
     def connectionMade(self):
+        print(len(self.factory.clients))
         self.factory.clients.append(self)
         print("Client connected:", self.transport.getPeer())
-        self.transport.write("Welcome to the server!".encode())
+        self.transport.write("Welcome to the server!\n".encode())
 
     def dataReceived(self, data):
-        print("Data received from client:", data.decode())
-        response = f"Server received: {data.decode()}"
-        self.transport.write(response.encode())
+        message = data.decode()
+        print("Data received from client:", message)
+        # Broadcast the message to all connected clients
+
+        self.factory.broadcastMessage(data)
 
     def connectionLost(self, reason):
         self.factory.clients.remove(self)
         print("Client disconnected:", self.transport.getPeer())
 
     def sendMessage(self, message):
-        self.transport.write(message.encode())
+        self.transport.write(message)
 
 class SimpleServerFactory(protocol.Factory):
     protocol = SimpleServerProtocol
@@ -32,10 +35,11 @@ class SimpleServerFactory(protocol.Factory):
 
     def broadcastMessage(self, message):
         for client in self.clients:
-            client.sendMessage(message)
+            print(client)
+            client.sendMessage(message + b'\n')
 
 # Setup and start the server
-host = '192.168.56.1'
+host = '127.0.0.1'
 port = 8000
 
 def startServer(host, port):

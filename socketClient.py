@@ -11,8 +11,11 @@ class PygameClient(protocol.Protocol):
 
     def dataReceived(self, data):
         print("Data received from server:", data.decode())
-        event = pygame.event.Event(ROBOT_DONE, message=data.decode())
-        pygame.event.post(event)
+        if (data.decode() == "RobotDone\n"):
+            event = pygame.event.Event(ROBOT_DONE, message=data.decode())
+            pygame.event.post(event)
+
+
 
     def sendMessage(self, message):
         self.transport.write(message.encode())
